@@ -1,4 +1,4 @@
-name: Bake AMI and stop EC2
+name: Bake AMI and stop EC2 (no SSM)
 
 on:
   workflow_dispatch:  # manual trigger
@@ -42,7 +42,7 @@ jobs:
       - name: Create AMI from EC2 instance
         id: create_ami
         run: |
-          AMI_NAME="terraform-ec2-lab-$(date +%Y%m%d%H%M%S)"
+          AMI_NAME="flask-ci-demo-$(date +%Y%m%d%H%M%S)"
           AMI_ID=$(aws ec2 create-image \
             --instance-id "$INSTANCE_ID" \
             --name "$AMI_NAME" \
