@@ -1,0 +1,51 @@
+name: Create AMI and Stop EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bake-and-stop:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ap-south-1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Get Instance ID
+        working-directory: ./terraform
+        run: echo "INSTANCE_ID=$(terraform output -raw ec2_instance_id)" >> $GITHUB_ENV
+
+      - name: Create AMI
+        run: |
+          AMI_NAME="flask-ci-demo-$(date +%Y%m%d%H%M%S)"
+          AMI_ID=$(aws ec2 create-image \
+              --instance-id "$INSTANCE_ID" \
+              --name "$AMI_NAME" \
+              --no-reboot \
+              --query 'ImageId' \
+              --output text)
+          echo "Created AMI: $AMI_ID"
+
+      - name: Stop EC2
+        run: |
+          aws ec2 stop-instances --instance-ids "$INSTANCE_ID"
+          aws ec2 wait instance-stopped --instance-ids "$INSTANCE_ID"
+          echo "EC2 stopped."
