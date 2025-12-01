@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "vasu-terraform-state-bucket"      # CHANGE THIS
+    bucket         = "vasu-terraform-state-bucket"      # change to your bucket name
     key            = "ec2-docker-lab/terraform.tfstate"
     region         = "ap-south-1"
-    dynamodb_table = "vasu-state-lock"             # CHANGE THIS
+    dynamodb_table = "vasu-state-lock"             # change to your DynamoDB table
     encrypt        = true
   }
 
@@ -72,6 +72,7 @@ resource "aws_instance" "web_server" {
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
   associate_public_ip_address = true
 
+  # recreate instance when user_data changes
   user_data_replace_on_change = true
 
   user_data = <<-EOF
@@ -86,3 +87,8 @@ resource "aws_instance" "web_server" {
               docker pull ${var.docker_image}
               docker run -d --name webapp -p 80:80 ${var.docker_image}
               EOF
+
+  tags = {
+    Name = "terraform-ec2-docker-lab"
+  }
+}
