@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
     bucket         = "vasu-terraform-state-bucket"      
-    key            = "ec2-docker-lab/terraform.tfstate" # path/file inside the bucket
+    key            = "ec2-docker-lab/terraform.tfstate" # any path/name
     region         = "ap-south-1"
-    dynamodb_table = "vasu-state-lock"
+    dynamodb_table = "vasu-state-lock"             # 🔁 change to your table
     encrypt        = true
   }
 
@@ -20,7 +20,6 @@ provider "aws" {
 }
 
 # ----- Network lookups -----
-
 data "aws_vpc" "default" {
   default = true
 }
@@ -33,7 +32,6 @@ data "aws_subnets" "default" {
 }
 
 # ----- Security Group -----
-
 resource "aws_security_group" "web_sg" {
   name        = "terraform-ec2-docker-sg"
   description = "Allow HTTP and SSH"
@@ -64,7 +62,6 @@ resource "aws_security_group" "web_sg" {
 }
 
 # ----- EC2 instance -----
-
 resource "aws_instance" "web_server" {
   ami                         = var.ami_id
   instance_type               = var.instance_type
@@ -72,19 +69,23 @@ resource "aws_instance" "web_server" {
   vpc_security_group_ids      = [aws_security_group.web_sg.id]
   associate_public_ip_address = true
 
-  tags = {
-    Name = "terraform-ec2-docker-lab"
-  }
+  #  recreate instance when user_data changes
+  user_data_replace_on_change = true
 
   user_data = <<-EOF
               #!/bin/bash
+              # deploy_version = ${var.deploy_version}
+
               apt-get update -y
               apt-get install -y docker.io
               systemctl start docker
               systemctl enable docker
 
-              # pull and run docker image from Docker Hub
               docker pull ${var.docker_image}
-              docker run -d -p 80:80 ${var.docker_image}
+              docker run -d --name webapp -p 80:80 ${var.docker_image}
               EOF
+
+  tags = {
+    Name = "terraform-ec2-docker-lab"
+  }
 }
