@@ -21,3 +21,9 @@ variable "docker_image" {
   description = "Docker image to run on EC2"
   type        = string
 }
+
+variable "deploy_version" {
+  description = "Dummy value to force EC2 recreate each deploy"
+  type        = string
+  default     = "v1"
+}
